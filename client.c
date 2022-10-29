@@ -7,6 +7,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+struct PacketNode {
+    uint8_t packetType;
+    char topicName[10];
+    uint8_t data;
+};
+
 #define SERVER_IP_ADDRESS	"127.0.0.1"
 #define SERVER_PORT			5000
 #define CLIENT_BUFF_SIZE	64
@@ -41,14 +47,18 @@ int main() {
 
     while(1) {
         // Get the message from client
-        printf("Enter the message you want to sent to server: \n");
+        printf("Enter the message you want to sent to server: ");
         scanf("%[^\n]s", client_buff);
 
-        // Send the message to server
-        c_size = send(sock_fd, client_buff, strlen(client_buff) + 1, 0);
+        struct PacketNode *data = malloc(sizeof(struct PacketNode));
+        data->packetType = 0;
+        strcpy(data->topicName, "Dimmer");
+        data->data = 5;
 
+        // Send the message to server
+        c_size = send(sock_fd, (void *)data, sizeof(data), 0);
         if(c_size > 0) {
-            printf("Message (%d bytes) sent to server successsfully, please check\n", c_size);
+            // printf("Message (%d bytes) sent to server successsfully, please check\n", c_size);
         } else {
             printf("Error: Message send!\n");
         }
