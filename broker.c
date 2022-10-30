@@ -12,7 +12,7 @@
 
 struct PacketNode {
     uint8_t packetType;
-    char topicName[10];
+    char topicName[25];
     uint8_t data;
 };
 
@@ -22,7 +22,7 @@ struct NodeSubClents {
 };
 
 struct NodeTopic {
-    char topic[10];
+    char topic[25];
     struct NodeSubClents *headSubNode;
     struct NodeTopic *next;
 };
@@ -33,6 +33,33 @@ struct NodeTopic *headTopicNode = NULL;
 #define SERVER_PORT     5000
 #define SERVER_LENGTH   16
 #define SERVER_BUFF     64
+
+void removeFd(int data_sock_fd) {
+    struct NodeTopic *temp = headTopicNode;
+    while(temp != NULL) {
+        if(temp->headSubNode != NULL) {
+            if(temp->headSubNode->fd == data_sock_fd) {
+                struct NodeSubClents *tempp = temp->headSubNode;
+                temp->headSubNode = temp->headSubNode->next;
+                free(tempp);
+            } else {
+                struct NodeSubClents *tempp = temp->headSubNode;
+                while(tempp->next != NULL) {
+                    if(tempp->next->fd == data_sock_fd) {
+                        struct NodeSubClents *temppp = tempp->next;
+                        tempp->next = tempp->next->next;
+                        free(temppp);
+                    }
+                    if(tempp->next != NULL) {
+                        tempp = tempp->next;
+                    }
+                }
+            }
+        }
+
+        temp = temp->next;
+    }
+}
 
 int8_t sub(struct PacketNode *data, int data_sock_fd) {
     if(headTopicNode == NULL) {
@@ -82,10 +109,8 @@ int8_t sub(struct PacketNode *data, int data_sock_fd) {
                         return 0;
                     } else {
                         if(temp->next->headSubNode->fd == data_sock_fd) {
-                            printf("Uper Came\n");
                             return 0;
                         } else {
-                            printf("Came\n");
                             struct NodeSubClents *tempp = temp->next->headSubNode;
                             while(tempp->next != NULL) {
                                 if(tempp->next->fd == data_sock_fd) {
@@ -119,6 +144,9 @@ int8_t sub(struct PacketNode *data, int data_sock_fd) {
 
 void print() {
     struct NodeTopic *temp = headTopicNode;
+    if(temp == NULL) {
+        printf("(Print: 1) - Head null\n");
+    }
     while(temp != NULL) {
         printf("--> %s ", temp->topic);
         struct NodeSubClents *tempp = temp->headSubNode;
@@ -154,6 +182,8 @@ void *handleMess(void *data_sock_fdd) {
         } else {
             // printf("Error: data receive!\n");
             printf("Client disconnteced! | FR: %d\n", data_sock_fd);
+            removeFd(data_sock_fd);
+            print();
             close(data_sock_fd);
             break;
         }

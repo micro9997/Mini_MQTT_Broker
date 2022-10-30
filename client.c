@@ -9,7 +9,7 @@
 
 struct PacketNode {
     uint8_t packetType;
-    char topicName[10];
+    char topicName[25];
     uint8_t data;
 };
 
@@ -19,7 +19,6 @@ struct PacketNode {
 
 int main() {
     int sock_fd, c_size;
-    char client_buff[CLIENT_BUFF_SIZE];
     struct sockaddr_in serv_addr; 
 
     // Create a client socket
@@ -47,13 +46,18 @@ int main() {
 
     while(1) {
         // Get the message from client
-        printf("Enter the message you want to sent to server: ");
-        scanf("%[^\n]s", client_buff);
-
         struct PacketNode *data = malloc(sizeof(struct PacketNode));
-        data->packetType = 0;
-        strcpy(data->topicName, "Dimmer");
-        data->data = 5;
+        printf("Plese enter the datas\n");
+        printf("Packet type: ");
+        scanf("%hhd", &data->packetType);
+        printf("Packet topic: ");
+        scanf("%s", data->topicName);
+        if(data->packetType == 1) {
+            printf("Packet data: ");
+            scanf("%hhd", &data->data);
+        } else {
+            data->data = 0;
+        }
 
         // Send the message to server
         c_size = send(sock_fd, (void *)data, sizeof(data), 0);
