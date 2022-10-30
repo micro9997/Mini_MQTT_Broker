@@ -13,7 +13,7 @@
 struct PacketNode {
     uint8_t packetType;
     char topicName[25];
-    uint8_t data;
+    int data;
 };
 
 struct NodeSubClents {
@@ -31,8 +31,37 @@ struct NodeTopic *headTopicNode = NULL;
 
 #define SERVER_IP       "127.0.0.1"
 #define SERVER_PORT     5000
-#define SERVER_LENGTH   16
+#define SERVER_LENGTH   64
 #define SERVER_BUFF     64
+
+void pub(struct PacketNode *data) {
+    struct NodeTopic *temp = headTopicNode;
+    while(temp != NULL) {
+        if(strcmp(temp->topic, data->topicName) == 0) {
+            struct NodeSubClents *tempp = temp->headSubNode;
+            while(tempp != NULL) {
+                struct PacketNode *dataNew = malloc(sizeof(struct PacketNode));
+                if(data == NULL) {
+                    printf("Error in malloc\n");
+                    return;
+                }
+                dataNew->packetType = 2;
+                strcpy(dataNew->topicName, data->topicName);
+                dataNew->data = data->data;
+                // Send the message to server
+                int c_size;
+                if(c_size = send(tempp->fd, (void *)dataNew, sizeof(struct PacketNode), 0) > 0) {
+                    printf("A data packet was sent to a client (file descriptor: %d)\n", tempp->fd);
+                } else {
+                    printf("Error: Message send!\n");
+                }
+                free(dataNew);
+                tempp = tempp->next;
+            }
+        }
+        temp = temp->next;
+    }
+}
 
 void removeFd(int data_sock_fd) {
     struct NodeTopic *temp = headTopicNode;
@@ -166,36 +195,35 @@ void print() {
 void *handleMess(void *data_sock_fdd) {
     while(1) {
         int data_sock_fd = (long)data_sock_fdd;
-        char serv_buffer[SERVER_BUFF];
-        memset(serv_buffer, 0, sizeof(serv_buffer));
 
         struct PacketNode *data = malloc(sizeof(struct PacketNode));
         if(data == NULL) {
-            print("Error in malloc\n");
+            printf("Error in malloc\n");
             break;
         }
 
         // Try to get some actual data from client
         int byteCount;
         if((byteCount = recv(data_sock_fd, (void *)data, sizeof(struct PacketNode), 0)) != 0) {
-            // printf("%d bytes of data are received | FD: %d\n", byteCount, data_sock_fd);
+            if(data->packetType == 0) {
+                printf("A subscribe (topic: %s) packet was received\n", data->topicName);
+                sub(data, data_sock_fd);
+            } else if(data->packetType == 1) {
+                printf("A publish (topic: %s) packet was received\n", data->topicName);
+                pub(data);
+            }
         } else {
-            // printf("Error: data receive!\n");
             printf("Client disconnteced! | FR: %d\n", data_sock_fd);
             removeFd(data_sock_fd);
-            print();
+            // print();
             close(data_sock_fd);
+            free(data);
             break;
         }
 
-        // Print the data received from client
-        // printf("Here is the client data | FD: %d | : %s\n", data_sock_fd, serv_buffer);
-        // printf("%s\n", data->topicName);
-        if(data->packetType == 0) {
-            sub(data, data_sock_fd);
-        }
+        free(data);
 
-        print();
+        // print();
     }
 }
 
@@ -225,7 +253,7 @@ int main() {
 
     // listen for incoming connections
     if((listen(sock_fd, SERVER_LENGTH)) == 0) {
-        printf("Broker started running . .\n");
+        printf("Broker started running . .\n\n");
     } else {
         printf("Error in running the broker!");
         return 1;
@@ -235,11 +263,12 @@ int main() {
     while(1) {
         int data_sock_fd = accept(sock_fd, (struct sockaddr*)NULL, NULL);
         if(data_sock_fd != -1) {
-            printf("A client connected | FD: %d\n", data_sock_fd);
+            printf("A client (file descriptor: %d) connected\n", data_sock_fd);
         } else {
             printf("Error in client connect!\n");
         }
 
+        // Thread for handle the incomming messages
         pthread_t tID;
         pthread_create(&tID, NULL, handleMess, (void *)(long)data_sock_fd);
     }
