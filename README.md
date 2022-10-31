@@ -10,7 +10,7 @@ C, System call, TCP/IP Socket, Multithreading and Single linked list
 ### Introduction
 MQTT is a lightweight protocol for machine-to-machine communication and is most suitable for IoT device communication. It uses TCP/IP sockets for communicating through IP.
 
-Here I'm creating server (broker) and client programs. This single client program can work as multiple clients at the same time, so a broker can communicate with multiple clients at a time using multithreading. The broker stores the data (topics, values, and file descriptors of clients) using single linked list. Then, if a published message is received, the broker sends data to subscribed clients only based on the data stored in a single linked list.
+Here I have created server (broker) and client programs. This single client program can work as multiple clients simultaneously, so a broker can interact with multiple clients simultaneously using multithreading. The broker stores the data (topics, values, and file descriptors of clients) using a single linked list. Then, when the published message is received, the broker sends the data to the subscriber clients only based on the data stored in a single linked list.
 
 &nbsp;
 
